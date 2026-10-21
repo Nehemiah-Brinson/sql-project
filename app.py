@@ -48,24 +48,26 @@ def actor(name):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT actor_id, actor_name
-        FROM Actors
+        SELECT movie_id, title, year, runtime, rating
+        FROM (Actors natural join Movie_Actors) natural join Movies
         WHERE LOWER(actor_name) = LOWER(%s)
         LIMIT 50;
     """, (name,))
-
+    
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
     return jsonify([
         {
-            "actor_id": r[0],
-            "actor_name": r[1]
+            "movie_id": r[0],
+            "title": r[1],
+            "year": r[2],
+            "runtime": r[3],
+            "rating": r[4]
         }
         for r in rows
     ])
-
 # -----------------------------
 # DIRECTOR SEARCH
 # -----------------------------
@@ -132,6 +134,11 @@ def home():
     return {
         "message": "IMDb API is running. Try /movie/Inception or /actor/Leonardo DiCaprio"
     }
+
+# ----------------------------
+#
+#-----------------------------
+
 
 # -----------------------------
 # RUN APP
