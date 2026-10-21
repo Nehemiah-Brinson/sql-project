@@ -3,122 +3,138 @@ import psycopg2
 
 app = Flask(__name__)
 
-NEON_DB_URL = os.getenv(
-    "NEON_DB_URL",
-    "postgresql://neondb_owner:YOUR_PASSWORD@ep-still-moon-b5ikt14z.us-east-2.aws.neon.tech/neondb"
-)
-# -----------------------------
-# MOCK MODE TO RUN WITHOUT DATA
-# -----------------------------
-USE_MOCK = True
+# Your Neon connection string
+NEON_URL = "postgresql://neondb_owner:npg_J8CrvlmuSiF0@ep-still-moon-b5ikt14z-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
-mock_movies = {
-    "tt1375666": {"movie_id": "tt1375666", "title": "Inception", "year": 2010, "runtime": 148, "rating": 8.8},
-    "tt0468569": {"movie_id": "tt0468569", "title": "The Dark Knight", "year": 2008, "runtime": 152, "rating": 9.0}
-}
-
-mock_actors = {
-    "Leonardo DiCaprio": {"actor_id": "nm0000138", "actor_name": "Leonardo DiCaprio"},
-    "Christian Bale": {"actor_id": "nm0000288", "actor_name": "Christian Bale"}
-}
-
-mock_genres = {
-    "Action": ["Inception", "The Dark Knight"],
-    "Drama": ["Inception"]
-}
-
-mock_recommendations = {
-    "tt1375666": ["The Dark Knight"],
-    "tt0468569": ["Inception"]
-}
-
-# -----------------------------
-# REAL DATABASE CONNECTION
-# -----------------------------
 def db():
-    return psycopg2.connect(
-        dbname="imdb",
-        user="postgres",
-        password="yourpassword",
-        host="localhost"
-    )
+    return psycopg2.connect(NEON_URL)
 
 # -----------------------------
-# ENDPOINTS
+# MOVIE SEARCH
 # -----------------------------
-
 @app.get("/movie/<title>")
-def get_movie(title):
-    if USE_MOCK:
-        for m in mock_movies.values():
-            if m["title"].lower() == title.lower():
-                return jsonify(m)
-        return jsonify({"error": "Movie not found (mock mode)"})
-
+def movie(title):
     conn = db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM Movies WHERE LOWER(title)=LOWER(%s);", (title,))
-    result = cur.fetchall()
-    cur.close()
-    conn.close()
-    return jsonify(result)
 
-
-@app.get("/actor/<name>")
-def get_actor(name):
-    if USE_MOCK:
-        return jsonify(mock_actors.get(name, {"error": "Actor not found (mock mode)"}))
-
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM Actors WHERE LOWER(actor_name)=LOWER(%s);", (name,))
-    result = cur.fetchall()
-    cur.close()
-    conn.close()
-    return jsonify(result)
-
-
-@app.get("/genre/<genre>")
-def get_genre(genre):
-    if USE_MOCK:
-        return jsonify(mock_genres.get(genre, []))
-
-    conn = db()
-    cur = conn.cursor()
     cur.execute("""
-        SELECT m.title
+        SELECT movie_id, title, year, runtime, rating
+        FROM Movies
+        WHERE LOWER(title) = LOWER(%s)
+        LIMIT 50;
+    """, (title,))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "movie_id": r[0],
+            "title": r[1],
+            "year": r[2],
+            "runtime": r[3],
+            "rating": r[4]
+        }
+        for r in rows
+    ])
+
+# -----------------------------
+# ACTOR SEARCH
+# -----------------------------
+@app.get("/actor/<name>")
+def actor(name):
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT actor_id, actor_name
+        FROM Actors
+        WHERE LOWER(actor_name) = LOWER(%s)
+        LIMIT 50;
+    """, (name,))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "actor_id": r[0],
+            "actor_name": r[1]
+        }
+        for r in rows
+    ])
+
+# -----------------------------
+# DIRECTOR SEARCH
+# -----------------------------
+@app.get("/director/<name>")
+def director(name):
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT director_id, director_name
+        FROM Directors
+        WHERE LOWER(director_name) = LOWER(%s)
+        LIMIT 50;
+    """, (name,))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "director_id": r[0],
+            "director_name": r[1]
+        }
+        for r in rows
+    ])
+
+# -----------------------------
+# GENRE SEARCH
+# -----------------------------
+@app.get("/genre/<genre>")
+def genre(genre):
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT m.movie_id, m.title, m.year, m.rating
         FROM Movies m
         JOIN Movie_Genres mg ON m.movie_id = mg.movie_id
         JOIN Genres g ON mg.genre_id = g.genre_id
-        WHERE LOWER(g.genre_name)=LOWER(%s);
+        WHERE LOWER(g.genre_name) = LOWER(%s)
+        LIMIT 100;
     """, (genre,))
-    result = cur.fetchall()
+
+    rows = cur.fetchall()
     cur.close()
     conn.close()
-    return jsonify(result)
 
+    return jsonify([
+        {
+            "movie_id": r[0],
+            "title": r[1],
+            "year": r[2],
+            "rating": r[3]
+        }
+        for r in rows
+    ])
 
-@app.get("/recommend/<movie_id>")
-def recommend(movie_id):
-    if USE_MOCK:
-        return jsonify(mock_recommendations.get(movie_id, []))
+# -----------------------------
+# HOME PAGE (optional)
+# -----------------------------
+@app.get("/")
+def home():
+    return {
+        "message": "IMDb API is running. Try /movie/Inception or /actor/Leonardo DiCaprio"
+    }
 
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT m.title
-        FROM Movie_Genres mg
-        JOIN Movies m ON mg.movie_id = m.movie_id
-        WHERE mg.genre_id IN (
-            SELECT genre_id FROM Movie_Genres WHERE movie_id=%s
-        )
-        AND m.movie_id != %s
-        LIMIT 10;
-    """, (movie_id, movie_id))
-    result = cur.fetchall()
-    cur.close()
-    conn.close()
-    return jsonify(result)
-
-
-app.run(debug=True)
+# -----------------------------
+# RUN APP
+# -----------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
