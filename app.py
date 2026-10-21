@@ -77,8 +77,8 @@ def director(name):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT director_id, director_name
-        FROM Directors
+        SELECT directors_id
+        FROM directors
         WHERE LOWER(director_name) = LOWER(%s)
         LIMIT 50;
     """, (name,))
@@ -135,10 +135,47 @@ def home():
         "message": "IMDb API is running. Try /movie/Inception or /actor/Leonardo DiCaprio"
     }
 
-# ----------------------------
-#
-#-----------------------------
+# -----------------------------
+# actor + genre SEARCH
+# -----------------------------
+@app.get("/genreActor/<actor>/<genre>")
+def genreActor(actor,genre):
+    conn = db()
+    cur = conn.cursor()
 
+    cur.execute("""
+        SELECT m.movie_id, m.title, m.year, m.rating
+        FROM Movies m
+        JOIN Movie_Genres mg ON m.movie_id = mg.movie_id
+        JOIN Genres g ON mg.genre_id = g.genre_id
+        WHERE LOWER(g.genre_name) = LOWER(%s) and  m.movie_id in (
+        SELECT movie_id
+        FROM (Actors natural join Movie_Actors) natural join Movies
+        WHERE LOWER(actor_name) = LOWER(%s)
+        )
+    """, (genre,actor,))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "movie_id": r[0],
+            "title": r[1],
+            "year": r[2],
+            "rating": r[3]
+        }
+        for r in rows
+    ])
+
+# -----------------------------
+# actor + genre SEARCH
+# -----------------------------
+@app.get("/actorGenre/<genre>/<actor>")
+def actorGenre(genre,actor):
+    return genreActor(actor,genre)
+    
 
 # -----------------------------
 # RUN APP
