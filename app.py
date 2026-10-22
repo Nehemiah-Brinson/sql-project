@@ -77,9 +77,11 @@ def director(name):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT directors_id
+        SELECT movie_id, title, year, runtime, rating
+        from movies natural join movie_directors
+        WHERE director_id in (SELECT director_id
         FROM directors
-        WHERE LOWER(director_name) = LOWER(%s)
+        WHERE LOWER(director_name) = LOWER(%s))
         LIMIT 50;
     """, (name,))
 
@@ -89,8 +91,11 @@ def director(name):
 
     return jsonify([
         {
-            "director_id": r[0],
-            "director_name": r[1]
+            "movie_id": r[0],
+            "title": r[1],
+            "year": r[2],
+            "runtime": r[3],
+            "rating": r[4]
         }
         for r in rows
     ])
