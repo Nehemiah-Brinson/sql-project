@@ -84,6 +84,24 @@ GET /director/<name>
 ### Genre Search
 GET /genre/<genre>
 
+### Genre + Actor Search
+GET /genreActor/<actor>/<genre>
+
+### Actor + Genre Search
+GET /actorGenre/<genre>/<actor>
+
+### Genre + Director Search
+GET /genreDirector/<genre>/<director>
+
+### Actor + Director Search
+GET /actorDirector/<actor>/<director>
+
+### Actor + Genre + Director Search
+GET /actorGenreDirector/<actor>/<genre>/<director>
+
+### API Home
+GET /
+
 ---
 
 ## 🌐 Front-End (index.html)
