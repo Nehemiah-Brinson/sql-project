@@ -105,7 +105,7 @@ GET /recommendation
 The recommendation endpoint reads from `user_query_history`. Search endpoints
 automatically add the user's movie, actor, director, and genre queries to this
 table. The API creates the table automatically if it is missing from the
-connected PostgreSQL database.
+connected PostgreSQL database. Cause I kept typing the name wrong
 
 ### API Home
 GET /
