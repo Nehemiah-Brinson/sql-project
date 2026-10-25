@@ -6,6 +6,13 @@ CREATE TABLE Movies (
     rating FLOAT
 );
 
+CREATE TABLE user_query_history (
+    id VARCHAR(64) NOT NULL,
+    query_value VARCHAR(255) NOT NULL,
+    query_type VARCHAR(30) NOT NULL,
+    "TimeStamp" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE Actors (
     actor_id VARCHAR(20) PRIMARY KEY,
     actor_name VARCHAR(255)
