@@ -1,11 +1,18 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 import psycopg2
 import hashlib
+import math
 import os
 import platform
 import uuid
 
 app = Flask(__name__)
+
+def json_number(value):
+    if value is None:
+        return None
+    numeric_value = float(value)
+    return numeric_value if math.isfinite(numeric_value) else None
 
 # Your Neon connection string
 NEON_URL = "postgresql://neondb_owner:npg_J8CrvlmuSiF0@ep-still-moon-b5ikt14z-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
@@ -32,14 +39,15 @@ def generate_unique_user_id():
 # -----------------------------
 # MOVIE RECOMMENDATIONS
 # -----------------------------
-@app.get("/recomendation") 
+@app.get("/recommendation")
+@app.get("/recomendation")
 def get_recommendations():
     #Recommend movies from the user's recent and repeated search interests.
     #User_Query_History.id is treated as the user identifier.  
     conn = db()
     cur = conn.cursor()
     user_id = request.args.get("user_id", generate_unique_user_id())
-    limit = min(max(request.args.get("limit", default=20, type=int), 1), 100)
+    limit = min(max(request.args.get("limit", default=50, type=int), 1), 100)
 
     cur.execute("""
         WITH history AS (
@@ -127,8 +135,8 @@ def get_recommendations():
             "title": r[1],
             "year": r[2],
             "runtime": r[3],
-            "rating": r[4],
-            "recommendation_score": round(float(r[5]), 4)
+            "rating": json_number(r[4]),
+            "recommendation_score": json_number(round(float(r[5]), 4))
         }
         for r in rows
     ])
@@ -184,7 +192,7 @@ def movie(title):
             "title": r[1],
             "year": r[2],
             "runtime": r[3],
-            "rating": r[4]
+            "rating": json_number(r[4])
         }
         for r in rows
     ])
@@ -216,7 +224,7 @@ def actor(name):
             "title": r[1],
             "year": r[2],
             "runtime": r[3],
-            "rating": r[4]
+            "rating": json_number(r[4])
         }
         for r in rows
     ])
@@ -250,7 +258,7 @@ def director(name):
             "title": r[1],
             "year": r[2],
             "runtime": r[3],
-            "rating": r[4]
+            "rating": json_number(r[4])
         }
         for r in rows
     ])
@@ -283,7 +291,7 @@ def genre(genre):
             "movie_id": r[0],
             "title": r[1],
             "year": r[2],
-            "rating": r[3]
+            "rating": json_number(r[3])
         }
         for r in rows
     ])
@@ -293,15 +301,7 @@ def genre(genre):
 # -----------------------------
 @app.get("/")
 def home():
-    return {
-        "message": (
-            "IMDb API is running. Try /movie/Inception, "
-            "/actor/Leonardo DiCaprio," 
-            "/genre/Action, "
-            "/genreActor/Horror/Leona Anderson, "
-            "/actorGenreDirector/Leona Anderson/horror/Kasper Barfoed"
-        )
-    }
+    return render_template("index.html")
 
 # -----------------------------
 # actor + genre SEARCH
@@ -334,7 +334,7 @@ def genreActor(genre,actor):
             "movie_id": r[0],
             "title": r[1],
             "year": r[2],
-            "rating": r[3]
+            "rating": json_number(r[3])
         }
         for r in rows
     ])
@@ -379,7 +379,7 @@ def genreDirector(genre, director):
             "movie_id": r[0],
             "title": r[1],
             "year": r[2],
-            "rating": r[3]
+            "rating": json_number(r[3])
         }
         for r in rows
     ])
@@ -417,7 +417,7 @@ def actorDirector(actor, director):
             "movie_id": r[0],
             "title": r[1],
             "year": r[2],
-            "rating": r[3]
+            "rating": json_number(r[3])
         }
         for r in rows
     ])
@@ -472,7 +472,7 @@ def actorGenreDirector(actor,genre,director):
             "movie_id": r[0],
             "title": r[1],
             "year": r[2],
-            "rating": r[3]
+            "rating": json_number(r[3])
         }
         for r in rows
     ])

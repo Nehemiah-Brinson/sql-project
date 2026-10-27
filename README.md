@@ -112,9 +112,16 @@ GET /
 
 ---
 
-## 🌐 Front-End (index.html)
+## 🌐 Front-End
 
-Open `index.html` in a browser to test the API with a simple UI.
+The Flask app serves a responsive movie discovery UI at the API root:
+
+1. Start the app with `python app.py`.
+2. Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in a browser.
+
+The UI supports title, actor, director, and genre searches, combinations of
+those filters, and personalized recommendations based on the current browser's
+search history.
 
 ---
 
