@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, render_template, request
+from analytics.analytics_routes import register_analytics_routes
 import psycopg2
 import hashlib
 import math
@@ -8,6 +9,7 @@ import uuid
 
 app = Flask(__name__)
 
+register_analytics_routes(app)
 def json_number(value):
     if value is None:
         return None
