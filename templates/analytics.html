@@ -7,6 +7,8 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/analytics.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -34,6 +36,12 @@
             <p id="genres-card">Loading...</p>
         </div>
 
+    </div>
+
+    <h2>Top Genres</h2>
+
+    <div class="chart-container">
+        <canvas id="genreChart"></canvas>
     </div>
 
     <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
