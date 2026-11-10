@@ -9,7 +9,7 @@ import uuid
 
 app = Flask(__name__)
 
-register_analytics_routes(app)
+
 def json_number(value):
     if value is None:
         return None
@@ -156,6 +156,8 @@ def db():
         """)
     conn.commit()
     return conn
+
+register_analytics_routes(app, db)
 
 def record_query_history(cur, query_type, query_value):
     cur.execute("""

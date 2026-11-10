@@ -1,33 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMDb Analytics Dashboard</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/analytics.css') }}">
 </head>
 <body>
 
-<h1>IMDb Analytics Dashboard</h1>
+    <h1>IMDb Analytics Dashboard</h1>
 
-<div id="overview-container">
+    <div id="overview-container">
 
-<div id="movies-card">
-    Movies: Loading...
-</div>
+        <div class="card">
+            <h2>Movies</h2>
+            <p id="movies-card">Loading...</p>
+        </div>
 
-<div id="actors-card">
-    Actors: Loading...
-</div>
+        <div class="card">
+            <h2>Actors</h2>
+            <p id="actors-card">Loading...</p>
+        </div>
 
-<div id="directors-card">
-    Directors: Loading...
-</div>
+        <div class="card">
+            <h2>Directors</h2>
+            <p id="directors-card">Loading...</p>
+        </div>
 
-<div id="genre-card">
-    Genres: Loading...
-</div>
+        <div class="card">
+            <h2>Genres</h2>
+            <p id="genres-card">Loading...</p>
+        </div>
 
-</div>
+    </div>
 
-<script src="{{url_for('static', filename='js/analytics.js')}}">
-</script>
-</body>    
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+
+</body>
 </html>
