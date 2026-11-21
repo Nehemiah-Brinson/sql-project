@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 from analytics.analytics_routes import register_analytics_routes
+from analytics.levenshtein import levenshtein_distance
 import psycopg2
 import hashlib
 import math
@@ -18,6 +19,43 @@ def json_number(value):
 
 # Your Neon connection string
 NEON_URL = "postgresql://neondb_owner:npg_J8CrvlmuSiF0@ep-still-moon-b5ikt14z-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+
+
+def fuzzy_correct(query, query_type):
+    table_columns = {
+        "actor": ("Actors", "actor_name"),
+        "director": ("Directors", "director_name"),
+        "genre": ("Genres", "genre_name"),
+    }
+    table_column = table_columns.get(query_type)
+    if table_column is None:
+        return query
+
+    table, column = table_column
+    conn = db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                f'SELECT DISTINCT {column} '
+                f'FROM {table} '
+                f'WHERE {column} IS NOT NULL'
+            )
+            known_names = [row[0] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+    if not known_names:
+        return query
+
+    closest_match = min(
+        known_names,
+        key=lambda name: levenshtein_distance(query, name),
+    )
+    distance = levenshtein_distance(query, closest_match)
+    return closest_match if distance <= 3 else query
+    
+   
 
 def generate_unique_user_id():
     # 1. Get the MAC address (Hardware ID)
@@ -208,7 +246,7 @@ def movie(title):
 def actor(name):
     conn = db()
     cur = conn.cursor()
-    record_query_history(cur, "actor", name)
+    
 
     cur.execute("""
         SELECT movie_id, title, year, runtime, rating
@@ -218,10 +256,21 @@ def actor(name):
     """, (name,))
     
     rows = cur.fetchall()
+    if not rows:
+        corrected_name = fuzzy_correct(name, "actor")
+        if corrected_name != name:
+            cur.execute("""
+                SELECT movie_id, title, year, runtime, rating
+                FROM (Actors natural join Movie_Actors) natural join Movies
+                WHERE LOWER(actor_name) = LOWER(%s)
+                LIMIT 50;
+            """, (corrected_name,))
+            rows = cur.fetchall()
+            name = corrected_name
+    record_query_history(cur, "actor", name)
     conn.commit()
     cur.close()
     conn.close()
-
     return jsonify([
         {
             "movie_id": r[0],
@@ -240,7 +289,7 @@ def actor(name):
 def director(name):
     conn = db()
     cur = conn.cursor()
-    record_query_history(cur, "director", name)
+    
 
     cur.execute("""
         SELECT movie_id, title, year, runtime, rating
@@ -252,6 +301,20 @@ def director(name):
     """, (name,))
 
     rows = cur.fetchall()
+    if not rows:
+        corrected_name = fuzzy_correct(name, "director")
+        if corrected_name != name:
+            cur.execute("""
+                SELECT movie_id, title, year, runtime, rating
+                from movies natural join movie_directors
+                WHERE director_id in (SELECT director_id
+                FROM directors
+                WHERE LOWER(director_name) = LOWER(%s))
+                LIMIT 50;
+            """, (corrected_name,))
+            rows = cur.fetchall()
+            name = corrected_name
+    record_query_history(cur, "director", name)
     conn.commit()
     cur.close()
     conn.close()
@@ -274,7 +337,7 @@ def director(name):
 def genre(genre):
     conn = db()
     cur = conn.cursor()
-    record_query_history(cur, "genre", genre)
+    
 
     cur.execute("""
         SELECT m.movie_id, m.title, m.year, m.rating
@@ -286,6 +349,20 @@ def genre(genre):
     """, (genre,))
 
     rows = cur.fetchall()
+    if not rows:
+        corrected_name = fuzzy_correct(genre, "genre")
+        if corrected_name != genre:
+            cur.execute("""
+                SELECT m.movie_id, m.title, m.year, m.rating
+                FROM Movies m
+                JOIN Movie_Genres mg ON m.movie_id = mg.movie_id
+                JOIN Genres g ON mg.genre_id = g.genre_id
+                WHERE LOWER(g.genre_name) = LOWER(%s)
+                LIMIT 100;
+            """, (corrected_name,))
+            rows = cur.fetchall()
+            genre = corrected_name
+    record_query_history(cur, "genre", genre)
     conn.commit()
     cur.close()
     conn.close()
